@@ -43,7 +43,7 @@
           </div>
           <div class="list-item-cell auto name" :aria-label="item.name">
             <span class="select name">{{ item.name }}</span>
-            <span v-if="isShowSource" class="no-select label-source">{{ item.source }}</span>
+            <span v-if="isShowSource" class="no-select label-source">{{ getSourceQualityText(item) }}</span>
           </div>
           <div class="list-item-cell" style="flex: 0 0 22%;"><span class="select" :aria-label="item.singer">{{ item.singer }}</span></div>
           <div class="list-item-cell" style="flex: 0 0 22%;"><span class="select" :aria-label="item.meta.albumName">{{ item.meta.albumName }}</span></div>
@@ -75,7 +75,7 @@
           </div>
           <div class="list-item-cell auto name">
             <span class="select name" :aria-label="item.name">{{ item.name }}</span>
-            <span v-if="isShowSource" class="no-select label-source">{{ item.source }}</span>
+            <span v-if="isShowSource" class="no-select label-source">{{ getSourceQualityText(item) }}</span>
           </div>
           <div class="list-item-cell" style="flex: 0 0 25%;"><span class="select" :aria-label="item.singer">{{ item.singer }}</span></div>
           <div class="list-item-cell" style="flex: 0 0 28%;"><span class="select" :aria-label="item.meta.albumName">{{ item.meta.albumName }}</span></div>
@@ -105,6 +105,7 @@
 
 <script>
 import { clipboardWriteText } from '@common/utils/electron'
+import { QUALITY_TEXT, getMusicHighestQuality } from '@renderer/core/music/utils'
 import { assertApiSupport } from '@renderer/store/utils'
 import SearchList from './components/SearchList.vue'
 import MusicSortModal from './components/MusicSortModal.vue'
@@ -136,6 +137,12 @@ export default {
   },
   emits: ['show-menu'],
   setup(props, { emit }) {
+    // 来源+音质角标，如 “kg 24bit”；本地/未标记音质的歌曲仅显示来源
+    const getSourceQualityText = (item) => {
+      const quality = getMusicHighestQuality(item)
+      return quality && QUALITY_TEXT[quality] ? `${item.source} ${QUALITY_TEXT[quality]}` : item.source
+    }
+
     const actionButtonsVisible = appSetting['list.actionButtonsVisible']
 
     let scrollIndex = null
@@ -347,6 +354,7 @@ export default {
 
       saveListPosition,
       isShowSource,
+      getSourceQualityText,
       handleRestoreScroll,
 
       actionButtonsVisible,
