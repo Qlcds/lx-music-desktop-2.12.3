@@ -63,6 +63,10 @@ export default {
     },
     getTypeName(quality) {
       switch (quality) {
+        case 'master':
+          return this.$t('download__lossless') + ' Master'
+        case 'atmos':
+          return this.$t('download__lossless') + ' Atmos'
         case 'flac24bit':
           return this.$t('download__lossless') + ' FLAC Hires'
         case 'flac':
