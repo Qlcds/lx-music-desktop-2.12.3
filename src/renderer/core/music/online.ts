@@ -5,13 +5,16 @@ import {
   saveMusicUrl,
   getMusicUrl as getStoreMusicUrl,
 } from '@renderer/utils/ipc'
+import { requestMsg } from '@renderer/utils/message'
 import {
   buildLyricInfo,
-  getPlayQuality,
+  getCachedLyricInfo,
+  getOtherSource,
+  getOnlineOtherSourceMusicUrl,
+  getPlayQualityList,
   handleGetOnlineLyricInfo,
   handleGetOnlineMusicUrl,
   handleGetOnlinePicUrl,
-  getCachedLyricInfo,
 } from './utils'
 
 /* export const setMusicUrl = ({ musicInfo, type, url }: {
@@ -45,21 +48,50 @@ export const getMusicUrl = async({ musicInfo, quality, isRefresh, allowToggleSou
   allowToggleSource?: boolean
   onToggleSource?: (musicInfo?: LX.Music.MusicInfoOnline) => void
 }): Promise<string> => {
-  // if (!musicInfo._types[type]) {
-  //   // 兼容旧版酷我源搜索列表过滤128k音质的bug
-  //   if (!(musicInfo.source == 'kw' && type == '128k')) throw new Error('该歌曲没有可播放的音频')
+  // 所选音质到 128k 之间的降级尝试序列；指定 quality 时则只尝试该档
+  const tryQualitys = quality ? [quality] : getPlayQualityList(appSetting['player.playQuality'], musicInfo)
+  let lastError: Error | null = null
 
-  //   // return Promise.reject(new Error('该歌曲没有可播放的音频'))
-  // }
-  const targetQuality = quality ?? getPlayQuality(appSetting['player.playQuality'], musicInfo)
-  const cachedUrl = await getStoreMusicUrl(musicInfo, targetQuality)
-  if (cachedUrl && !isRefresh) return cachedUrl
+  for (const itemQuality of tryQualitys) {
+    const cachedUrl = await getStoreMusicUrl(musicInfo, itemQuality)
+    if (cachedUrl && !isRefresh) return cachedUrl
+    try {
+      const { url, quality: targetQuality, musicInfo: targetMusicInfo } = await handleGetOnlineMusicUrl({
+        musicInfo,
+        quality: itemQuality,
+        onToggleSource,
+        isRefresh,
+        allowToggleSource: false,
+      })
+      if (targetMusicInfo.id != musicInfo.id) void saveMusicUrl(targetMusicInfo, targetQuality, url)
+      void saveMusicUrl(musicInfo, targetQuality, url)
+      return url
+    } catch (err: any) {
+      if (err?.message == requestMsg.tooManyRequests) throw err
+      lastError = err
+      console.log(err)
+    }
+  }
 
-  return handleGetOnlineMusicUrl({ musicInfo, quality, onToggleSource, isRefresh, allowToggleSource }).then(({ url, quality: targetQuality, musicInfo: targetMusicInfo, isFromCache }) => {
-    if (targetMusicInfo.id != musicInfo.id && !isFromCache) void saveMusicUrl(targetMusicInfo, targetQuality, url)
-    void saveMusicUrl(musicInfo, targetQuality, url)
-    return url
-  })
+  // 同源各档位全部失败，才尝试切换其他来源（在该来源上按所选音质自行降级）
+  if (allowToggleSource) {
+    onToggleSource()
+    const otherSource = await getOtherSource(musicInfo)
+    console.log('find otherSource', otherSource)
+    if (otherSource.length) {
+      const { url, quality: targetQuality, musicInfo: targetMusicInfo } = await getOnlineOtherSourceMusicUrl({
+        musicInfos: [...otherSource],
+        quality,
+        onToggleSource,
+        isRefresh,
+        retryedSource: [musicInfo.source],
+      })
+      void saveMusicUrl(targetMusicInfo, targetQuality, url)
+      return url
+    }
+  }
+
+  throw lastError ?? new Error(window.i18n.t('toggle_source_failed'))
 }
 
 export const getPicUrl = async({ musicInfo, listId, isRefresh, allowToggleSource = true, onToggleSource = () => {} }: {
