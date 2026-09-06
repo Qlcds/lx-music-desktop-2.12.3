@@ -38,7 +38,7 @@ dd
   div
     base-checkbox.gap-left(
       v-for="item in playQualityList" :id="`setting_play_quality_${item}`" :key="item"
-      name="setting_play_quality" need :model-value="appSetting['player.playQuality']" :value="item" :label="item"
+      name="setting_play_quality" need :model-value="appSetting['player.playQuality']" :value="item" :label="qualityLabelMap[item]"
       @update:model-value="updateSetting({'player.playQuality': $event})")
 
 dd(:aria-label="$t('setting__play_mediaDevice_title')")
@@ -55,7 +55,7 @@ import { useI18n } from '@renderer/plugins/i18n'
 import { appSetting, saveMediaDeviceId, updateSetting } from '@renderer/store/setting'
 import { setPowerSaveBlocker } from '@renderer/core/player/utils'
 import { isPlay } from '@renderer/store/player/state'
-import { TRY_QUALITYS_LIST } from '@renderer/core/music/utils'
+import { PLAY_QUALITYS } from '@renderer/core/music/utils'
 import { isMac } from '@common/utils'
 
 
@@ -63,7 +63,16 @@ export default {
   name: 'SettingPlay',
   setup() {
     const t = useI18n()
-    const playQualityList = [...TRY_QUALITYS_LIST, '128k'].reverse()
+    // 展示顺序由低到高：128K / 320K / Flac / Flac24bit / Atmos / Master
+    const playQualityList = [...PLAY_QUALITYS].reverse()
+    const qualityLabelMap = {
+      master: 'Master',
+      atmos: 'Atmos',
+      flac24bit: 'Flac24bit',
+      flac: 'Flac',
+      '320k': '320K',
+      '128k': '128K',
+    }
 
     const mediaDevices = ref([])
     const getMediaDevice = async() => {
@@ -148,6 +157,7 @@ export default {
       isMaxOutputChannelCount,
       handleUpdateMaxOutputChannelCount,
       playQualityList,
+      qualityLabelMap,
       isMac,
     }
   },
