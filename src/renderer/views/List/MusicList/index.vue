@@ -105,7 +105,7 @@
 
 <script>
 import { clipboardWriteText } from '@common/utils/electron'
-import { QUALITY_TEXT, getMusicHighestQuality } from '@renderer/core/music/utils'
+import { QUALITY_TEXT, getSongDisplayQuality } from '@renderer/core/music/utils'
 import { assertApiSupport } from '@renderer/store/utils'
 import SearchList from './components/SearchList.vue'
 import MusicSortModal from './components/MusicSortModal.vue'
@@ -139,7 +139,7 @@ export default {
   setup(props, { emit }) {
     // 来源+音质角标，如 “kg 24bit”；本地/未标记音质的歌曲仅显示来源
     const getSourceQualityText = (item) => {
-      const quality = getMusicHighestQuality(item)
+      const quality = getSongDisplayQuality(item)
       return quality && QUALITY_TEXT[quality] ? `${item.source} ${QUALITY_TEXT[quality]}` : item.source
     }
 
