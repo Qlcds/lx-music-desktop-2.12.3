@@ -157,12 +157,13 @@ export default {
         case 'wav':
         case 'ape': return 'tag__lossless'
         case '320k': return 'tag__high_quality'
+        case '128k': return 'tag__128k'
         default: return ''
       }
     }
     const getQualityTagTheme = (item) => {
       const quality = getSongDisplayQuality(item)
-      return quality == '320k' ? 'secondary' : 'primary'
+      return quality == '320k' || quality == '128k' ? 'secondary' : 'primary'
     }
 
     const {
