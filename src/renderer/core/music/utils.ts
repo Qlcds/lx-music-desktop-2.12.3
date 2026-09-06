@@ -243,6 +243,28 @@ export const getMusicHighestQuality = (musicInfo: LX.Music.MusicInfo): LX.Qualit
 }
 
 /**
+ * 列表展示用的最高音质：把解析出的最高档按“当前音源声明支持的上限”强制提升到 master/atmos。
+ * 仅当该曲解析结果已达无损级及以上时才提升，避免把低码率歌曲误标为母带。
+ * 列表解析结果最高只到 flac24bit，而音源可能实际能取到 Master/Atmos；
+ * 播放侧已有“失败自动降级”兜底，因此这里的“高估”是安全的。
+ */
+export const getSongDisplayQuality = (musicInfo: LX.Music.MusicInfoOnline): LX.Quality | null => {
+  const parsedTop = getMusicHighestQuality(musicInfo)
+  if (!parsedTop) return null
+  const sourceList = qualityList.value[musicInfo.source]
+  const sourceTop = sourceList?.length ? sourceList[sourceList.length - 1] : null
+  if (sourceTop == 'atmos' || sourceTop == 'master') {
+    const parsedIndex = QUALITYS.indexOf(parsedTop)
+    const flacIndex = QUALITYS.indexOf('flac')
+    if (parsedIndex != -1 && parsedIndex <= flacIndex) {
+      // 无损及以上，按音源上限强制显示最高音质
+      return sourceTop
+    }
+  }
+  return parsedTop
+}
+
+/**
  * 根据“优先播放的音质”与歌曲/播放源的实际情况，生成从高到低可尝试的音质序列。
  * 规则：在所选档位及以下（高→低）中，仅保留
  *   1) 播放源(qualityList) 声明支持的档位，和
